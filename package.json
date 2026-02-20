@@ -5,7 +5,6 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "postinstall": "npx playwright install chromium",
     "start": "next start",
     "lint": "eslint",
     "worker": "npx tsx --env-file=.env.local worker/index.ts",

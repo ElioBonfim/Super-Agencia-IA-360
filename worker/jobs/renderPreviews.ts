@@ -1,14 +1,30 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { chromium, Browser } from 'playwright';
+import { execSync } from 'child_process';
 
 let browser: Browser | null = null;
+let systemChromePath: string | undefined = process.env.CHROME_PATH;
+
+if (!systemChromePath || systemChromePath === '/usr/bin/chromium') {
+    try {
+        systemChromePath = execSync('which chromium').toString().trim();
+    } catch (e) {
+        try {
+            systemChromePath = execSync('which chromium-browser').toString().trim();
+        } catch (e2) {
+            systemChromePath = undefined;
+        }
+    }
+}
 
 async function getBrowser(): Promise<Browser> {
     if (!browser || !browser.isConnected()) {
         const options: Parameters<typeof chromium.launch>[0] = { headless: true };
-        if (process.env.CHROME_PATH) {
-            console.log(`[Playwright] Using system Chromium at ${process.env.CHROME_PATH}`);
-            options.executablePath = process.env.CHROME_PATH;
+        if (systemChromePath) {
+            console.log(`[Playwright] Using system Chromium at ${systemChromePath}`);
+            options.executablePath = systemChromePath;
+        } else {
+            console.log(`[Playwright] Using default downloaded Chromium`);
         }
         browser = await chromium.launch(options);
     }
