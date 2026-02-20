@@ -1,8 +1,8 @@
 [phases.setup]
-nixPkgs = ["...", "nodejs", "chromium", "vips"]
+nixPkgs = ["...", "nodejs", "playwright-driver.browsers", "vips"]
 
 [phases.build]
 cmds = ["npm install", "npm run build"]
 
 [variables]
-PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1"
+PLAYWRIGHT_BROWSERS_PATH = "/nix/store"
