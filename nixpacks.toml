@@ -1,3 +1,6 @@
+[variables]
+PLAYWRIGHT_BROWSERS_PATH = "/app/playwright-browsers"
+
 [phases.setup]
 nixPkgs = ["...", "nodejs", "vips"]
 aptPkgs = [
@@ -7,6 +10,9 @@ aptPkgs = [
     "libcairo2", "libasound2", "libexpat1"
 ]
 
-
 [phases.build]
-cmds = ["npm install", "PLAYWRIGHT_BROWSERS_PATH=/app/playwright-browsers npx playwright install chromium", "npm run build"]
+cmds = [
+    "npm install",
+    "npx playwright install chromium",
+    "npm run build"
+]
