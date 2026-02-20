@@ -101,8 +101,18 @@ async function generateImage(prompt: string): Promise<string> {
         });
 
         const data = await response.json();
+
+        if (!response.ok) {
+            const errMsg = data?.error?.message || JSON.stringify(data);
+            console.error(`[generateBackgrounds] OpenAI Image API error (${response.status}):`, errMsg);
+            throw new Error(`OpenAI Image API error ${response.status}: ${errMsg}`);
+        }
+
         const url = data.data?.[0]?.url;
-        if (!url) throw new Error('Empty image generation response');
+        if (!url) {
+            console.error('[generateBackgrounds] Empty image response. Full response:', JSON.stringify(data));
+            throw new Error('Empty image generation response');
+        }
         return url;
     }
 

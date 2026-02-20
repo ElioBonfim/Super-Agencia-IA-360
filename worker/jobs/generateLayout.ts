@@ -87,8 +87,18 @@ async function callLLM(prompt: string): Promise<Record<string, unknown>> {
         });
 
         const data = await response.json();
+
+        if (!response.ok) {
+            const errMsg = data?.error?.message || JSON.stringify(data);
+            console.error(`[generateLayout] OpenAI API error (${response.status}):`, errMsg);
+            throw new Error(`OpenAI API error ${response.status}: ${errMsg}`);
+        }
+
         const content = data.choices?.[0]?.message?.content;
-        if (!content) throw new Error('Empty LLM response');
+        if (!content) {
+            console.error('[generateLayout] Empty LLM response. Full API response:', JSON.stringify(data));
+            throw new Error('Empty LLM response');
+        }
 
         return JSON.parse(content);
     }
