@@ -9,10 +9,23 @@ import { renderPreviews } from './jobs/renderPreviews';
 import { validateSlides } from './jobs/validate';
 import { renderHires } from './jobs/renderHires';
 
+const redisUrl = process.env.REDIS_URL;
+if (!redisUrl) {
+    console.warn('⚠️ REDIS_URL is not defined for worker. Falling back to redis://localhost:6379');
+} else {
+    // Log target host (safe version)
+    console.log(`🔌 Worker connecting to Redis at ${redisUrl.split('@').pop()?.split('/')[0] || 'hidden-url'}`);
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const connection: any = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379', {
+const connection: any = new IORedis(redisUrl || 'redis://localhost:6379', {
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
+    connectTimeout: 10000,
+});
+
+connection.on('error', (err: any) => {
+    console.error('❌ Worker Redis connection error:', err.message);
 });
 
 const CONCURRENCY = parseInt(process.env.WORKER_CONCURRENCY || '3', 10);
