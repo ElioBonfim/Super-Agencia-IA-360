@@ -5,7 +5,12 @@ let browser: Browser | null = null;
 
 async function getBrowser(): Promise<Browser> {
     if (!browser || !browser.isConnected()) {
-        browser = await chromium.launch({ headless: true });
+        const options: Parameters<typeof chromium.launch>[0] = { headless: true };
+        if (process.env.CHROME_PATH) {
+            console.log(`[Playwright] Using system Chromium at ${process.env.CHROME_PATH}`);
+            options.executablePath = process.env.CHROME_PATH;
+        }
+        browser = await chromium.launch(options);
     }
     return browser;
 }
