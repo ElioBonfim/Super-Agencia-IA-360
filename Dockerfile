@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/playwright:jammy
+FROM mcr.microsoft.com/playwright:v1.58.2-jammy
 
 # Set working directory
 WORKDIR /app
