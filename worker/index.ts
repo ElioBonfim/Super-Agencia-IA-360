@@ -10,22 +10,48 @@ import { validateSlides } from './jobs/validate';
 import { renderHires } from './jobs/renderHires';
 
 const redisUrl = process.env.REDIS_URL;
-if (!redisUrl) {
-    console.warn('⚠️ REDIS_URL is not defined for worker. Falling back to redis://localhost:6379');
-} else {
-    // Log target host (safe version)
-    console.log(`🔌 Worker connecting to Redis at ${redisUrl.split('@').pop()?.split('/')[0] || 'hidden-url'}`);
+const host = process.env.REDISHOST || process.env.REDIS_HOST;
+const port = parseInt(process.env.REDISPORT || process.env.REDIS_PORT || '6379', 10);
+const password = process.env.REDISPASSWORD || process.env.REDIS_PASSWORD;
+
+function getWorkerConnection(): any {
+    if (redisUrl) {
+        console.log(`🔌 Worker connecting to Redis via URL: ${redisUrl.split('@').pop()?.split('/')[0] || 'hidden-url'}`);
+        return new IORedis(redisUrl, {
+            maxRetriesPerRequest: null,
+            enableReadyCheck: false,
+            connectTimeout: 10000,
+            family: 0,
+        });
+    } else if (host) {
+        console.log(`🔌 Worker connecting to Redis via host: ${host}:${port}`);
+        return new IORedis({
+            host,
+            port,
+            password,
+            maxRetriesPerRequest: null,
+            enableReadyCheck: false,
+            connectTimeout: 10000,
+            family: 0,
+        });
+    } else {
+        console.warn('⚠️ Worker: No Redis configuration found. Falling back to localhost:6379');
+        return new IORedis('redis://localhost:6379', {
+            maxRetriesPerRequest: null,
+            enableReadyCheck: false,
+            connectTimeout: 5000,
+        });
+    }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const connection: any = new IORedis(redisUrl || 'redis://localhost:6379', {
-    maxRetriesPerRequest: null,
-    enableReadyCheck: false,
-    connectTimeout: 10000,
-});
+const connection = getWorkerConnection();
 
 connection.on('error', (err: any) => {
     console.error('❌ Worker Redis connection error:', err.message);
+});
+
+connection.on('connect', () => {
+    console.log('✅ Worker Redis connected successfully');
 });
 
 const CONCURRENCY = parseInt(process.env.WORKER_CONCURRENCY || '3', 10);

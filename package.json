@@ -8,8 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "worker": "npx tsx --env-file=.env.local worker/index.ts",
-    "worker:prod": "npx tsx worker/index.ts",
-    "reset-carousels": "npx tsx --env-file=.env.local scripts/reset-stuck-carousels.ts"
+    "worker:prod": "tsx worker/index.ts",
+    "reset-carousels": "tsx scripts/reset-stuck-carousels.ts",
+    "test-redis": "tsx scripts/test-redis.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",
