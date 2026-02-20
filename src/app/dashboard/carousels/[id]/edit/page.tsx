@@ -2,7 +2,7 @@
 
 import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Save, CheckCircle, Sparkles, Plus, Trash2, Wand2, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, CheckCircle, Sparkles, Plus, Trash2, Wand2, Loader2, ChevronDown, ChevronUp, Copy, Check } from 'lucide-react';
 
 interface Slide {
     id: string;
@@ -13,6 +13,8 @@ interface Slide {
     bullets: string[];
     cta_text: string | null;
     preview_url: string | null;
+    bg_url: string | null;
+    bg_prompt: string | null;
 }
 
 interface Carousel {
@@ -31,6 +33,14 @@ export default function CarouselEditPage({ params }: { params: Promise<{ id: str
     const [saving, setSaving] = useState(false);
     const [loading, setLoading] = useState(true);
     const [generatingCopy, setGeneratingCopy] = useState(false);
+    const [promptExpanded, setPromptExpanded] = useState(false);
+    const [copied, setCopied] = useState(false);
+
+    async function copyPrompt(text: string) {
+        await navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    }
 
     useEffect(() => {
         fetchCarousel();
@@ -246,6 +256,8 @@ export default function CarouselEditPage({ params }: { params: Promise<{ id: str
                                 // Auto-save current slide before switching
                                 if (currentSlide && isDraft) saveSlide(currentSlide);
                                 setActiveSlide(i);
+                                setPromptExpanded(false);
+                                setCopied(false);
                             }}
                         >
                             {slide.preview_url ? (
@@ -329,7 +341,7 @@ export default function CarouselEditPage({ params }: { params: Promise<{ id: str
                             />
                         </div>
 
-                        {/* Live preview mini */}
+                        {/* Preview */}
                         {currentSlide.preview_url && (
                             <div className="form-group">
                                 <label className="form-label">Preview</label>
@@ -339,6 +351,61 @@ export default function CarouselEditPage({ params }: { params: Promise<{ id: str
                                 }}>
                                     <img src={currentSlide.preview_url} alt={`Preview slide ${currentSlide.position}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                 </div>
+                            </div>
+                        )}
+
+                        {/* Image Prompt debug section */}
+                        {currentSlide.bg_prompt && (
+                            <div className="form-group" style={{ marginTop: 8 }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setPromptExpanded(v => !v)}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: 8, background: 'none',
+                                        border: '1px solid var(--border)', borderRadius: 8, padding: '8px 14px',
+                                        cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 13,
+                                        width: '100%', justifyContent: 'space-between',
+                                    }}
+                                >
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        🔍 Ver Prompt da Imagem
+                                    </span>
+                                    {promptExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                </button>
+
+                                {promptExpanded && (
+                                    <div style={{
+                                        marginTop: 8, background: 'var(--surface-2, #1a1a2e)',
+                                        border: '1px solid var(--border)', borderRadius: 8, padding: 14,
+                                        position: 'relative',
+                                    }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => copyPrompt(currentSlide.bg_prompt!)}
+                                            title="Copiar prompt"
+                                            style={{
+                                                position: 'absolute', top: 10, right: 10,
+                                                background: copied ? '#22c55e' : 'var(--border)',
+                                                border: 'none', borderRadius: 6, padding: '4px 10px',
+                                                cursor: 'pointer', color: 'white', fontSize: 12,
+                                                display: 'flex', alignItems: 'center', gap: 4,
+                                                transition: 'background 0.2s',
+                                            }}
+                                        >
+                                            {copied ? <Check size={12} /> : <Copy size={12} />}
+                                            {copied ? 'Copiado!' : 'Copiar'}
+                                        </button>
+                                        <pre style={{
+                                            margin: 0, fontSize: 12, lineHeight: 1.6,
+                                            color: 'var(--text-secondary)', whiteSpace: 'pre-wrap',
+                                            wordBreak: 'break-word', paddingRight: 80,
+                                            maxHeight: 300, overflowY: 'auto',
+                                            fontFamily: 'monospace',
+                                        }}>
+                                            {currentSlide.bg_prompt}
+                                        </pre>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>

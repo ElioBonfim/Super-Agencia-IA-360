@@ -63,7 +63,7 @@ export async function generateBackgrounds(carouselId: string, supabase: Supabase
             .from('slides')
             .update({
                 bg_url: urlData.publicUrl,
-                bg_prompt: prompt.substring(0, 500), // Store truncated prompt for reference
+                bg_prompt: prompt, // Store full prompt for debugging
             })
             .eq('id', slide.id);
     }
@@ -73,7 +73,11 @@ export async function generateBackgrounds(carouselId: string, supabase: Supabase
         carousel_id: carouselId,
         type: 'generate_bg',
         status: 'completed',
-        result: { backgrounds_generated: slides.length },
+        result: {
+            backgrounds_generated: slides.length,
+            model: process.env.IMAGE_AI_MODEL || 'dall-e-3',
+            provider: process.env.IMAGE_AI_PROVIDER || 'openai',
+        },
     });
 }
 
