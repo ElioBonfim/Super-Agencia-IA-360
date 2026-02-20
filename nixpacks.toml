@@ -8,5 +8,4 @@ aptPkgs = [
 ]
 
 [phases.build]
-cmds = ["npm install", "npx playwright install chromium", "npm run build"]
-cacheDirectories = ["/root/.cache/ms-playwright"]
+cmds = ["npm install", "npm run build"]
