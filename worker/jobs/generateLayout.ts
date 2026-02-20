@@ -68,15 +68,21 @@ export async function generateLayout(carouselId: string, supabase: SupabaseClien
 async function callLLM(prompt: string): Promise<Record<string, unknown>> {
     const provider = process.env.LLM_PROVIDER || 'openai';
 
-    if (provider === 'openai') {
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    if (provider === 'openai' || provider === 'nano-banana' || provider === 'gemini') {
+        const baseUrl = process.env.LLM_BASE_URL || 'https://api.openai.com/v1';
+        const apiKey = process.env.LLM_API_KEY || process.env.OPENAI_API_KEY;
+        const model = process.env.LLM_MODEL || 'gpt-4o';
+
+        console.log(`[generateLayout] Calling LLM: ${baseUrl} model=${model}`);
+
+        const response = await fetch(`${baseUrl}/chat/completions`, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+                'Authorization': `Bearer ${apiKey}`,
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                model: process.env.LLM_MODEL || 'gpt-4o',
+                model,
                 messages: [
                     { role: 'system', content: 'You are a layout engine. Return ONLY valid JSON, no markdown.' },
                     { role: 'user', content: prompt },
@@ -90,8 +96,8 @@ async function callLLM(prompt: string): Promise<Record<string, unknown>> {
 
         if (!response.ok) {
             const errMsg = data?.error?.message || JSON.stringify(data);
-            console.error(`[generateLayout] OpenAI API error (${response.status}):`, errMsg);
-            throw new Error(`OpenAI API error ${response.status}: ${errMsg}`);
+            console.error(`[generateLayout] API error (${response.status}):`, errMsg);
+            throw new Error(`LLM API error ${response.status}: ${errMsg}`);
         }
 
         const content = data.choices?.[0]?.message?.content;

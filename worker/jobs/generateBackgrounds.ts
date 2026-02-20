@@ -84,15 +84,21 @@ export async function generateBackgrounds(carouselId: string, supabase: Supabase
 async function generateImage(prompt: string): Promise<string> {
     const provider = process.env.IMAGE_AI_PROVIDER || 'openai';
 
-    if (provider === 'openai') {
-        const response = await fetch('https://api.openai.com/v1/images/generations', {
+    if (provider === 'openai' || provider === 'nano-banana' || provider === 'gemini') {
+        const baseUrl = process.env.IMAGE_AI_BASE_URL || 'https://api.openai.com/v1';
+        const apiKey = process.env.IMAGE_AI_API_KEY || process.env.LLM_API_KEY || process.env.OPENAI_API_KEY;
+        const model = process.env.IMAGE_AI_MODEL || 'dall-e-3';
+
+        console.log(`[generateBackgrounds] Calling Image AI: ${baseUrl} model=${model}`);
+
+        const response = await fetch(`${baseUrl}/images/generations`, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+                'Authorization': `Bearer ${apiKey}`,
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                model: process.env.IMAGE_AI_MODEL || 'dall-e-3',
+                model,
                 prompt,
                 n: 1,
                 size: '1024x1792', // closest to 1080x1350 (4:5)
@@ -104,8 +110,8 @@ async function generateImage(prompt: string): Promise<string> {
 
         if (!response.ok) {
             const errMsg = data?.error?.message || JSON.stringify(data);
-            console.error(`[generateBackgrounds] OpenAI Image API error (${response.status}):`, errMsg);
-            throw new Error(`OpenAI Image API error ${response.status}: ${errMsg}`);
+            console.error(`[generateBackgrounds] Image API error (${response.status}):`, errMsg);
+            throw new Error(`Image API error ${response.status}: ${errMsg}`);
         }
 
         const url = data.data?.[0]?.url;
