@@ -5,10 +5,10 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "npx playwright install chromium && next start",
+    "start": "mkdir -p ~/.cache && ln -sfn /app/playwright-browsers ~/.cache/ms-playwright && next start",
     "lint": "eslint",
     "worker": "npx tsx --env-file=.env.local worker/index.ts",
-    "worker:prod": "npx playwright install chromium && tsx worker/index.ts",
+    "worker:prod": "mkdir -p ~/.cache && ln -sfn /app/playwright-browsers ~/.cache/ms-playwright && tsx worker/index.ts",
     "reset-carousels": "tsx scripts/reset-stuck-carousels.ts",
     "test-redis": "tsx scripts/test-redis.ts"
   },
