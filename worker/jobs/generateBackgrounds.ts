@@ -43,14 +43,10 @@ export async function generateBackgrounds(carouselId: string, supabase: Supabase
         prompt = prompt.replace('{{ safe_zone_position }}', slideLayout?.bg_safe_zone_position || 'center');
         prompt = prompt.replace('{{ safe_zone_pct }}', String(slideLayout?.bg_safe_zone_pct || 60));
 
-        // Call Image AI
-        const imageUrl = await generateImage(prompt);
+        // Call Image AI — returns a buffer directly
+        const imageBuffer = await generateImage(prompt);
 
-        // Download and upload to Supabase Storage
-        const imageResponse = await fetch(imageUrl);
-        const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
         const storagePath = `${carouselId}/bg_${slide.position}.png`;
-
         await supabase.storage.from('carousel-gen').upload(storagePath, imageBuffer, {
             contentType: 'image/png',
             upsert: true,
@@ -81,15 +77,57 @@ export async function generateBackgrounds(carouselId: string, supabase: Supabase
     });
 }
 
-async function generateImage(prompt: string): Promise<string> {
+// Returns a Buffer containing the image (PNG)
+async function generateImage(prompt: string): Promise<Buffer> {
     const provider = process.env.IMAGE_AI_PROVIDER || 'openai';
+    const apiKey = process.env.IMAGE_AI_API_KEY || process.env.LLM_API_KEY || process.env.OPENAI_API_KEY;
+    const model = process.env.IMAGE_AI_MODEL || 'dall-e-3';
 
-    if (provider === 'openai' || provider === 'nano-banana' || provider === 'gemini') {
+    // ── Gemini (native Google API) ──────────────────────────────────────────
+    if (provider === 'gemini' || provider === 'nano-banana') {
+        const baseUrl = process.env.IMAGE_AI_BASE_URL || 'https://generativelanguage.googleapis.com';
+        const url = `${baseUrl}/v1beta/models/${model}:generateContent`;
+
+        console.log(`[generateBackgrounds] Gemini image generation: model=${model}`);
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-goog-api-key': apiKey!,
+            },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: {
+                    responseModalities: ['image', 'text'],
+                },
+            }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            const errMsg = data?.error?.message || JSON.stringify(data);
+            console.error(`[generateBackgrounds] Gemini Image API error (${response.status}):`, errMsg);
+            throw new Error(`Gemini Image API error ${response.status}: ${errMsg}`);
+        }
+
+        // Gemini returns base64 inline data
+        const parts = data.candidates?.[0]?.content?.parts ?? [];
+        const imagePart = parts.find((p: { inlineData?: { data: string; mimeType: string } }) => p.inlineData);
+
+        if (!imagePart?.inlineData?.data) {
+            console.error('[generateBackgrounds] No image in Gemini response:', JSON.stringify(data));
+            throw new Error('Gemini returned no image data');
+        }
+
+        return Buffer.from(imagePart.inlineData.data, 'base64');
+    }
+
+    // ── OpenAI / DALL-E (URL-based) ─────────────────────────────────────────
+    if (provider === 'openai') {
         const baseUrl = process.env.IMAGE_AI_BASE_URL || 'https://api.openai.com/v1';
-        const apiKey = process.env.IMAGE_AI_API_KEY || process.env.LLM_API_KEY || process.env.OPENAI_API_KEY;
-        const model = process.env.IMAGE_AI_MODEL || 'dall-e-3';
-
-        console.log(`[generateBackgrounds] Calling Image AI: ${baseUrl} model=${model}`);
+        console.log(`[generateBackgrounds] OpenAI image generation: model=${model}`);
 
         const response = await fetch(`${baseUrl}/images/generations`, {
             method: 'POST',
@@ -101,7 +139,7 @@ async function generateImage(prompt: string): Promise<string> {
                 model,
                 prompt,
                 n: 1,
-                size: '1024x1792', // closest to 1080x1350 (4:5)
+                size: '1024x1792',
                 quality: 'standard',
             }),
         });
@@ -110,16 +148,18 @@ async function generateImage(prompt: string): Promise<string> {
 
         if (!response.ok) {
             const errMsg = data?.error?.message || JSON.stringify(data);
-            console.error(`[generateBackgrounds] Image API error (${response.status}):`, errMsg);
-            throw new Error(`Image API error ${response.status}: ${errMsg}`);
+            console.error(`[generateBackgrounds] OpenAI Image API error (${response.status}):`, errMsg);
+            throw new Error(`OpenAI Image API error ${response.status}: ${errMsg}`);
         }
 
-        const url = data.data?.[0]?.url;
-        if (!url) {
-            console.error('[generateBackgrounds] Empty image response. Full response:', JSON.stringify(data));
+        const imageUrl = data.data?.[0]?.url;
+        if (!imageUrl) {
+            console.error('[generateBackgrounds] Empty image response:', JSON.stringify(data));
             throw new Error('Empty image generation response');
         }
-        return url;
+
+        const imageResponse = await fetch(imageUrl);
+        return Buffer.from(await imageResponse.arrayBuffer());
     }
 
     throw new Error(`Unsupported image provider: ${provider}`);
