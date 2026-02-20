@@ -7,5 +7,8 @@ aptPkgs = [
     "libcairo2", "libasound2", "libexpat1"
 ]
 
+[variables]
+PLAYWRIGHT_BROWSERS_PATH = "/app/.cache-playwright"
+
 [phases.build]
 cmds = ["npm install", "npx playwright install chromium", "npm run build"]
